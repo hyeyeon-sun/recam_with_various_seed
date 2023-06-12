@@ -30,9 +30,16 @@ def _work(process_id, model, dataset, args):
         model.cuda()
 
         for iter, pack in enumerate(data_loader):
-            img_name = voc12.dataloader.decode_int_filename(pack['name'][0])
-            # if os.path.exists(os.path.join(args.sem_seg_out_dir, img_name + '.png')):
+            # if iter < 1500:
+            #     print("1500이하", iter)
             #     continue
+            # print("iter", iter)
+            # print(voc12.dataloader.decode_int_filename(pack['name'][0]))
+            img_name = voc12.dataloader.decode_int_filename(pack['name'][0])
+            if os.path.exists(os.path.join(args.sem_seg_out_dir, img_name + '.png')):
+                print(iter, "이미 있어")
+                continue
+            print(img_name)
             orig_img_size = np.asarray(pack['size'])
 
             edge, dp = model(pack['img'][0].cuda(non_blocking=True))

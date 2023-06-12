@@ -12,6 +12,10 @@ def run(args):
     labels = []
     n_img = 0
     for i, id in enumerate(dataset.ids):
+        if not os.path.exists(os.path.join(args.sem_seg_out_dir, id + '.png')):
+            print("요건 없어. 끝")
+            break
+
         cls_labels = imageio.imread(os.path.join(args.sem_seg_out_dir, id + '.png')).astype(np.uint8)
         cls_labels[cls_labels == 255] = 0
         preds.append(cls_labels.copy())

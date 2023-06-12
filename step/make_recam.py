@@ -3,6 +3,7 @@ from torch import multiprocessing, cuda
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torch.backends import cudnn
+from torchvision.models.segmentation import deeplabv3_resnet50
 
 import numpy as np
 import importlib
@@ -51,8 +52,11 @@ def _work(process_id, model, dataset, args):
 
             highres_cam = highres_cam[valid_cat]
             highres_cam /= F.adaptive_max_pool2d(highres_cam, (1, 1)) + 1e-5
-            
+            # CUDA_VISIBLE_DEVICES=0 python run_sample.py --voc12_root ./VOCdevkit/VOC2012/ --work_space score --make_recam_pass True --eval_cam_pass True 
             # save cams
+            print("경로")
+            print(os.path.join(args.cam_out_dir, img_name + '.npy'))
+
             np.save(os.path.join(args.cam_out_dir, img_name + '.npy'), {"keys": valid_cat, "cam": strided_cam.cpu(), "high_res": highres_cam.cpu().numpy()})
 
             if process_id == n_gpus - 1 and iter % (len(databin) // 20) == 0:
@@ -61,6 +65,19 @@ def _work(process_id, model, dataset, args):
 
 def run(args):
     model = getattr(importlib.import_module(args.cam_network), 'CAM')()
+    
+    # model = net.resnet50_cam.GradCAM(model=model,
+    #          target_layers=target_layers,
+    #          use_cuda=torch.cuda.is_available())
+
+    
+
+    # args.recam_weight_dir = "score/recam_weight_origin"
+
+    print("recam_weight_dir", args.recam_weight_dir)
+
+
+    
     model.load_state_dict(torch.load(osp.join(args.recam_weight_dir,'res50_recam_'+str(args.recam_num_epoches) + '.pth')))
     model.eval()
 

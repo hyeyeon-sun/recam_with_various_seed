@@ -46,6 +46,7 @@ def run(args):
     for ep in range(args.irn_num_epoches):
 
         print('Epoch %d/%d' % (ep+1, args.irn_num_epoches))
+        
 
         for iter, pack in enumerate(train_data_loader):
 
@@ -66,7 +67,7 @@ def run(args):
 
             avg_meter.add({'loss1': pos_aff_loss.item(), 'loss2': neg_aff_loss.item(),
                            'loss3': dp_fg_loss.item(), 'loss4': dp_bg_loss.item()})
-
+            
             total_loss = (pos_aff_loss + neg_aff_loss) / 2 + (dp_fg_loss + dp_bg_loss) / 2
 
             optimizer.zero_grad()

@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from chainercv.datasets import VOCSemanticSegmentationDataset
 from chainercv.evaluations import calc_semantic_segmentation_confusion
-
+import gc
 
 import importlib
 
@@ -46,7 +46,15 @@ def validate(model, data_loader):
 
 def run(args):
     print('train_recam')
-    model = getattr(importlib.import_module(args.cam_network), 'Net_CAM_Feature')()
+    if args.seed_type == "CAM":
+        print("캠이다 !")
+        model = getattr(importlib.import_module(args.cam_network), 'Net_CAM_Feature')()
+    elif args.seed_type == "ScoreCAM":
+        print("스코어캠이다 !")
+        gc.collect()
+        torch.cuda.empty_cache()
+        model = getattr(importlib.import_module(args.cam_network), 'Net_ScoreCAM_Feature')()
+
     param_groups = model.trainable_parameters()
     model.load_state_dict(torch.load(args.cam_weights_name), strict=True)
     model = torch.nn.DataParallel(model).cuda()
@@ -59,9 +67,15 @@ def run(args):
     train_dataset = voc12.dataloader.VOC12ClassificationDataset(args.train_list, voc12_root=args.voc12_root,
                                                                 resize_long=(320, 640), hor_flip=True,
                                                                 crop_size=512, crop_method="random")
+
     train_data_loader = DataLoader(train_dataset, batch_size=args.cam_batch_size,
                                    shuffle=True, num_workers=args.num_workers, pin_memory=True, drop_last=True)
+    
+
+    
     max_step = (len(train_dataset) // args.cam_batch_size) * args.recam_num_epoches
+    #max_step = (100 // args.cam_batch_size) * args.recam_num_epoches
+
 
     val_dataset = voc12.dataloader.VOC12ClassificationDataset(args.val_list, voc12_root=args.voc12_root,
                                                               crop_size=512)
@@ -78,17 +92,29 @@ def run(args):
 
     timer = pyutils.Timer()
     global_step = 0
+
+    print("---------")
+    print(args.voc12_root)
+    print(args.train_list)
+    print(len(train_dataset))
+    print("(len(train_dataset) // args.cam_batch_size) : ", (len(train_dataset) // args.cam_batch_size))
+    print(max_step)
+
     for ep in range(args.recam_num_epoches):
 
         print('Epoch %d/%d' % (ep+1, args.recam_num_epoches))
         model.train()
 
         for step, pack in enumerate(train_data_loader):
+            print("step", step)
+
+            if step > 30:
+                print("넘 커. 끝")
+                break
 
             img = pack['img'].cuda()
             label = pack['label'].cuda(non_blocking=True)
             x,cam,_ = model(img)
-
 
             loss_cls = F.multilabel_soft_margin_loss(x, label)
             loss_ce,acc = recam_predictor(cam,label)
@@ -103,6 +129,10 @@ def run(args):
             optimizer.step()
             global_step += 1
 
+            print(
+            'step:%5d/%5d' % (global_step - 1, max_step),
+            )
+
             if (global_step-1)%100 == 0:
                 timer.update_progress(global_step / max_step)
 
@@ -114,8 +144,13 @@ def run(args):
                       'lr: %.4f' % (optimizer.param_groups[2]['lr']),
                       'etc:%s' % (timer.str_estimated_complete()), flush=True)
         
-        validate(model, val_data_loader)
+        print("모델 저장")
+        #validate(model, val_data_loader)
+        print("모델 저장1")
         timer.reset_stage()
+        print("모델 저장2")
         torch.save(model.module.state_dict(), osp.join(args.recam_weight_dir,'res50_recam_'+str(ep+1) + '.pth'))    
+        print("모델 저장3")
         torch.save(recam_predictor.module.state_dict(), osp.join(args.recam_weight_dir,'recam_predictor_'+str(ep+1) + '.pth'))
+        print("모델 저장 끝")
     torch.cuda.empty_cache()

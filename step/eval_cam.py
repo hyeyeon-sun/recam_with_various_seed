@@ -7,11 +7,17 @@ from chainercv.evaluations import calc_semantic_segmentation_confusion
 def run(args):
     dataset = VOCSemanticSegmentationDataset(split=args.chainer_eval_set, data_dir=args.voc12_root)
     # labels = [dataset.get_example_by_keys(i, (1,))[0] for i in range(len(dataset))]
-
+    print("여기 타는지 ?")
     preds = []
     labels = []
     n_images = 0
+
     for i, id in enumerate(dataset.ids):
+        print("id :", id)
+        if not os.path.exists(os.path.join(args.cam_out_dir, id + '.npy')):
+            print("요건 없어. 끝")
+            break
+
         n_images += 1
         cam_dict = np.load(os.path.join(args.cam_out_dir, id + '.npy'), allow_pickle=True).item()
         cams = cam_dict['high_res']

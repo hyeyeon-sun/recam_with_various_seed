@@ -17,11 +17,13 @@ palette = [0,0,0,  128,0,0,  0,128,0,  128,128,0,  0,0,128,  128,0,128,  0,128,1
 					 64,64,0,  192,64,0,  64,192,0, 192,192,0]
 
 def _work(process_id, infer_dataset, args):
+    print("worker", process_id)
     visualize_intermediate_cam = False
     databin = infer_dataset[process_id]
     infer_data_loader = DataLoader(databin, shuffle=False, num_workers=0, pin_memory=False)
 
     for iter, pack in enumerate(infer_data_loader):
+        print("aaa", iter, "---", process_id)
         img_name = voc12.dataloader.decode_int_filename(pack['name'][0])
         img = pack['img'][0].numpy()
         cam_dict = np.load(os.path.join(args.cam_out_dir, img_name + '.npy'), allow_pickle=True).item()
@@ -48,10 +50,12 @@ def _work(process_id, infer_dataset, args):
         conf[bg_conf + fg_conf == 0] = 0
 
         imageio.imwrite(os.path.join(args.ir_label_out_dir, img_name + '.png'), conf.astype(np.uint8))
+        print(args.ir_label_out_dir, img_name + '.png')
 
+        print("databin개수", len(databin))
 
-        if process_id == args.num_workers - 1 and iter % (len(databin) // 20) == 0:
-            print("%d " % ((5 * iter + 1) // (len(databin) // 20)), end='')
+        if process_id == args.num_workers - 1 and iter % (len(databin) // 15) == 0:
+            print("%d " % ((5 * iter + 1) // (len(databin) // 15)), end='')
 
 def run(args):
     dataset = voc12.dataloader.VOC12ImageDataset(args.train_list, voc12_root=args.voc12_root, img_normal=None, to_torch=False)
@@ -60,3 +64,5 @@ def run(args):
     print('[ ', end='')
     multiprocessing.spawn(_work, nprocs=args.num_workers, args=(dataset, args), join=True)
     print(']')
+
+# CUDA_VISIBLE_DEVICES=0 python run_sample.py --voc12_root ./VOCdevkit/VOC2012/ --work_space score --train_irn_pass True
