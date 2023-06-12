@@ -5,6 +5,9 @@ import os.path as osp
 
 from misc import pyutils
 
+# 연동이 잘 되는지 ?
+# 음 ??!
+
 if __name__ == '__main__':
     def str2bool(v):
         if isinstance(v, bool):
@@ -20,7 +23,7 @@ if __name__ == '__main__':
 
     # Environment
     # parser.add_argument("--num_workers", default=os.cpu_count()//2, type=int)
-    parser.add_argument("--num_workers", default=12, type=int)
+    parser.add_argument("--num_workers", default=2, type=int)
     parser.add_argument("--voc12_root", default='../VOCdevkit/VOC2012/', type=str,
                         help="Path to VOC 2012 Devkit, must contain ./JPEGImages as subdirectory.")
 
@@ -31,6 +34,10 @@ if __name__ == '__main__':
                         help="voc12/train_aug.txt to train a fully supervised model, "
                              "voc12/train.txt or voc12/val.txt to quickly check the quality of the labels.")
     parser.add_argument("--chainer_eval_set", default="train", type=str)
+
+    # Seed Type
+    parser.add_argument("--seed_type", default="CAM",
+                        type=str)
 
     # Class Activation Map
     parser.add_argument("--cam_network", default="net.resnet50_cam", type=str)
@@ -55,7 +62,7 @@ if __name__ == '__main__':
     # Inter-pixel Relation Network (IRNet)
     parser.add_argument("--irn_network", default="net.resnet50_irn", type=str)
     parser.add_argument("--irn_crop_size", default=512, type=int)
-    parser.add_argument("--irn_batch_size", default=32, type=int)
+    parser.add_argument("--irn_batch_size", default=10, type=int)
     parser.add_argument("--irn_num_epoches", default=3, type=int)
     parser.add_argument("--irn_learning_rate", default=0.1, type=float)
     parser.add_argument("--irn_weight_decay", default=1e-4, type=float)
@@ -109,7 +116,6 @@ if __name__ == '__main__':
     os.makedirs(args.recam_weight_dir, exist_ok=True)
     pyutils.Logger(args.log_name + '.log')
     print(vars(args))
-
 
     if args.train_cam_pass is True:
         import step.train_cam
